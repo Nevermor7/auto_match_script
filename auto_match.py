@@ -34,7 +34,7 @@ class CFAotuGUI(tk.Tk):
         super().__init__()
         random.seed(datetime.now().timestamp())
         self.title("Ack")
-        self.geometry("580x550-233+0")
+        self.geometry("700x640-150+0")
         self.templates = {}
         self.receive_templates = {}
         self.f11_templates = {}
