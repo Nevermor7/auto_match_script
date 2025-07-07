@@ -4,9 +4,7 @@ import os
 import random
 from time import sleep
 from datetime import datetime
-import pydirectinput
 import pygetwindow
-
 import cv2
 import numpy as np
 import pyautogui
@@ -19,7 +17,7 @@ try:
 except ImportError:
     win32api = None
 
-# 全局热键库优先使用 pynput
+# 全局热键库优先使用 pynput,这个包需要手动导入
 try:
     from pynput import keyboard as kb
 except ImportError:
