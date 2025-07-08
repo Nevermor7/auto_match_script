@@ -34,7 +34,7 @@ class CFAotuGUI(tk.Tk):
         super().__init__()
         random.seed(datetime.now().timestamp())
         self.title("Ack")
-        self.geometry("700x640-150+0")
+        self.geometry("800x720-130+0")
         self.templates = {}
         self.receive_templates = {}
         self.f11_templates = {}
@@ -43,15 +43,16 @@ class CFAotuGUI(tk.Tk):
         self.stop_hotkey = tk.StringVar(value="F7")
         self.worker_thread = None
         self.hotkey_listener = None
-        self.is_topmost = tk.BooleanVar(value=False)
+        self.is_topmost = tk.BooleanVar(value=True)
         self.last_action_time = time.time()
-        self.emergency_enabled = tk.BooleanVar(value=True)
+        self.emergency_enabled = tk.BooleanVar(value=False)
         self.interval_seconds = random.randint(180, 600)
         self.interval_minutes_min = tk.StringVar(value="3")
         self.interval_minutes_max = tk.StringVar(value="10")
         self.log_enabled = tk.BooleanVar(value=True)
-        self.f11_enabled = tk.BooleanVar(value=True)
+        self.f11_enabled = tk.BooleanVar(value=False)
         self.receive_tag = False
+        self.scale_value = tk.DoubleVar(value=0.9)
 
         os.makedirs(TEMPLATE_DIR, exist_ok=True)
         os.makedirs(F11_TEMPLATE_DIR, exist_ok=True)
@@ -67,13 +68,20 @@ class CFAotuGUI(tk.Tk):
     def _build_ui(self):
         frame = ttk.Frame(self)
         frame.pack(fill=tk.X, padx=5, pady=5)
-
         ttk.Button(frame, text="添加模板", command=self.add_template).pack(side=tk.LEFT, padx=5)
         ttk.Button(frame, text="移除模板", command=self.remove_template).pack(side=tk.LEFT)
         ttk.Button(frame, text="刷新模板", command=self._load_templates).pack(side=tk.LEFT, padx=5)
         ttk.Button(frame, text="添加F11模板", command=self.add_f11_template).pack(side=tk.LEFT)
         ttk.Button(frame, text="移除F11模板", command=self.remove_f11_template).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(frame, text="置顶窗口", variable=self.is_topmost, command=self.toggle_topmost).pack(side=tk.LEFT)
+        ttk.Checkbutton(frame, text="置顶窗口", variable=self.is_topmost, command=self.toggle_topmost).pack(
+            side=tk.LEFT)
+
+        scale_frame = ttk.Frame(self)
+        scale_frame.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Label(scale_frame, text="识别模板的匹配度阈值，默认90%").pack(side=tk.LEFT, padx=5)
+        ttk.Scale(scale_frame, value=self.scale_value.get(), command=self.set_scale_value, to=1, length=211).pack(
+            side=tk.LEFT)
+        ttk.Label(scale_frame, textvariable=self.scale_value, width=5).pack(side=tk.LEFT, padx=10)
 
         hot_frame = ttk.Frame(self)
         hot_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -81,7 +89,7 @@ class CFAotuGUI(tk.Tk):
         ttk.Entry(hot_frame, textvariable=self.start_hotkey, width=15).pack(side=tk.LEFT, padx=5)
         ttk.Label(hot_frame, text="停止热键:").pack(side=tk.LEFT)
         ttk.Entry(hot_frame, textvariable=self.stop_hotkey, width=15).pack(side=tk.LEFT, padx=5)
-        ttk.Button(hot_frame, text="刷新热键", command=self._load_hotkey_listener).pack(side=tk.LEFT,)
+        ttk.Button(hot_frame, text="刷新热键", command=self._load_hotkey_listener).pack(side=tk.LEFT, )
 
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -90,12 +98,14 @@ class CFAotuGUI(tk.Tk):
 
         setting_frame = ttk.Frame(self)
         setting_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Checkbutton(setting_frame, text="启用反挂机检测", variable=self.emergency_enabled).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(setting_frame, text="启用反挂机检测", variable=self.emergency_enabled).pack(side=tk.LEFT,
+                                                                                                    padx=5)
         ttk.Label(setting_frame, text="触发区间(分钟):").pack(side=tk.LEFT)
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_min, width=3).pack(side=tk.LEFT)
         ttk.Label(setting_frame, text="~").pack(side=tk.LEFT)
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_max, width=3).pack(side=tk.LEFT)
-        ttk.Checkbutton(setting_frame, text="启用自动按F11踢狗\n(需添加游戏内投票特征截图)", variable=self.f11_enabled).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(setting_frame, text="启用自动按F11踢狗\n(需添加游戏内投票特征截图)",
+                        variable=self.f11_enabled).pack(side=tk.LEFT, padx=5)
         ttk.Checkbutton(setting_frame, text="启用日志输出", variable=self.log_enabled).pack(side=tk.LEFT, padx=5)
 
         self.listbox = tk.Listbox(self, height=8)
@@ -105,6 +115,9 @@ class CFAotuGUI(tk.Tk):
         self.log.pack(fill=tk.BOTH, padx=5, pady=5)
         self.log.insert(tk.END, "日志信息...\n")
         self.log.configure(state=tk.DISABLED)
+
+    def set_scale_value(self, change_value):
+        self.scale_value.set(round(float(change_value), 2))
 
     def toggle_topmost(self):
         self.attributes('-topmost', self.is_topmost.get())
@@ -252,7 +265,7 @@ class CFAotuGUI(tk.Tk):
     def window_capture(self, window_title, file_prefix):
         # 获取窗口的位置和大小
         windows = pygetwindow.getWindowsWithTitle(window_title)
-        if windows:
+        if windows and windows[0].isActive:
             window = windows[0]
             left, top, width, height = window.left, window.top, window.width, window.height
             screenshot = pyautogui.screenshot(region=(left, top, width, height))
@@ -262,7 +275,7 @@ class CFAotuGUI(tk.Tk):
         # 保存截图
         target_dir = rf'{SCREEN_SHOT}\{time.strftime('%Y-%m-%d')}'
         os.makedirs(target_dir, exist_ok=True)
-        file_name = f'{file_prefix}_{time.strftime('%H%M')}.png'
+        file_name = f'{file_prefix}_{time.strftime('%H_%M')}.png'
         file_path = os.path.join(target_dir, file_name)
         screenshot.save(file_path)
         self.log_message(f"截图已保存至{file_path}")
@@ -276,28 +289,26 @@ class CFAotuGUI(tk.Tk):
                 for path, tpl in self.receive_templates.items():
                     res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                    if max_val >= 0.9:
+                    if max_val >= self.scale_value.get():
                         th, tw = tpl.shape
                         x = max_loc[0] + tw // 2
                         y = max_loc[1] + th // 2
                         self.click_at(x, y)
                         self.log_message(
-                            f"点击了 {os.path.basename(path)} @({x},{y}) conf={max_val:.2f},进入领取界面")
+                            f"点击了 {os.path.basename(path)}@({x},{y})conf={max_val:.2f}进入领取界面")
                         sleep(1)
 
             # 开始匹配
             screenshot = pyautogui.screenshot()
             screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
             found = False
-
             for path, tpl in self.templates.items():
                 res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                if max_val >= 0.9:
+                if max_val >= self.scale_value.get():
                     if os.path.basename(path).find("settlement") >= 0:
                         self.window_capture('穿越火线', 'settlement')
                         self.receive_tag = True
-
                     th, tw = tpl.shape
                     x = max_loc[0] + tw // 2
                     y = max_loc[1] + th // 2
@@ -306,18 +317,20 @@ class CFAotuGUI(tk.Tk):
                     self.log_message(f"点击了 {os.path.basename(path)} @({x},{y}) conf={max_val:.2f}")
                     time.sleep(1)
                     found = True
-                    if os.path.basename(path).find("match") >= 0:
-                        self.receive_tag = False
-                    if os.path.basename(path).find("quit_receive") >= 0:
+                    if os.path.basename(path).find("receive") >= 0:
+                        # 需要重新截屏以获取最新的画面
+                        self.log_message("正在重新扫描屏幕...")
                         screenshot = pyautogui.screenshot()
                         screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
+                    if os.path.basename(path).find("match") >= 0:
+                        self.receive_tag = False
 
             # 上票
             if self.f11_enabled.get():  # 检查是否开启 F11 检测
                 for path, tpl in self.f11_templates.items():
                     res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, _ = cv2.minMaxLoc(res)
-                    if max_val >= 0.85:
+                    if max_val >= self.scale_value.get():
                         pyautogui.press('f11')
                         self.log_message(f"检测到t人: {os.path.basename(path)}，已按下F11")
                         break
