@@ -43,14 +43,14 @@ class CFAotuGUI(tk.Tk):
         self.stop_hotkey = tk.StringVar(value="F7")
         self.worker_thread = None
         self.hotkey_listener = None
-        self.is_topmost = tk.BooleanVar(value=True)
+        self.is_topmost = tk.BooleanVar(value=False)
         self.last_action_time = time.time()
-        self.emergency_enabled = tk.BooleanVar(value=False)
+        self.emergency_enabled = tk.BooleanVar(value=True)
         self.interval_seconds = random.randint(180, 600)
         self.interval_minutes_min = tk.StringVar(value="3")
         self.interval_minutes_max = tk.StringVar(value="10")
         self.log_enabled = tk.BooleanVar(value=True)
-        self.f11_enabled = tk.BooleanVar(value=False)
+        self.f11_enabled = tk.BooleanVar(value=True)
         self.receive_tag = False
         self.scale_value = tk.DoubleVar(value=0.9)
 
@@ -104,7 +104,7 @@ class CFAotuGUI(tk.Tk):
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_min, width=3).pack(side=tk.LEFT)
         ttk.Label(setting_frame, text="~").pack(side=tk.LEFT)
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_max, width=3).pack(side=tk.LEFT)
-        ttk.Checkbutton(setting_frame, text="启用自动按F11踢狗\n(需添加游戏内投票特征截图)",
+        ttk.Checkbutton(setting_frame, text=" 启用自动按F11踢狗\n*需添加投票特征模板",
                         variable=self.f11_enabled).pack(side=tk.LEFT, padx=5)
         ttk.Checkbutton(setting_frame, text="启用日志输出", variable=self.log_enabled).pack(side=tk.LEFT, padx=5)
 
@@ -219,7 +219,7 @@ class CFAotuGUI(tk.Tk):
             self.hotkey_listener.start()
             self.log_message(f"绑定全局热键 ===> {self.start_hotkey.get()}-开始挂机  {self.stop_hotkey.get()}-停止挂机")
         else:
-            self.log_message('绑定热键失败！请手动点击运行！')
+            self.log_message('绑定热键失败！请手动点击开始挂机！')
 
     def click_at(self, x, y):
         try:
@@ -324,6 +324,8 @@ class CFAotuGUI(tk.Tk):
                         screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
                     if os.path.basename(path).find("match") >= 0:
                         self.receive_tag = False
+                    if os.path.basename(path).find("mission") >= 0:
+                        self.receive_tag = True
 
             # 上票
             if self.f11_enabled.get():  # 检查是否开启 F11 检测
