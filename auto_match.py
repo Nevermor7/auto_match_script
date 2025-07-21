@@ -45,6 +45,7 @@ class CFAotuGUI(tk.Tk):
         self.is_topmost = tk.BooleanVar(value=True)
         self.last_action_time = time.time()
         self.emergency_enabled = tk.BooleanVar(value=True)
+        self.enable_move_mouse = False
         self.interval_seconds_min = 60
         self.interval_seconds_max = 240
         self.interval_seconds = random.randint(self.interval_seconds_min, self.interval_seconds_max)
@@ -332,6 +333,11 @@ class CFAotuGUI(tk.Tk):
                         pydirectinput.press('esc')
                         self.log_message("模板中有esc关键字,已按下")
                         continue
+                    if file_name.find("seconds") >= 0:
+                        self.enable_move_mouse = True
+                        pydirectinput.press('f')
+                        self.log_message("检测到正在读秒,已按下F增加变鬼概率")
+                        continue
                     if self.enable_menu_chose.get():
                         if file_name.find("ui") >= 0:
                             pydirectinput.press('e')
@@ -364,6 +370,7 @@ class CFAotuGUI(tk.Tk):
                             self.log_message("已使用技能F")
                             continue
                     if file_name.find("settle") >= 0:
+                        self.enable_move_mouse = False
                         self.window_capture('settle')
                         time.sleep(0.5)
                     th, tw = tpl.shape
@@ -391,11 +398,11 @@ class CFAotuGUI(tk.Tk):
             if not found and self.emergency_enabled.get() and self.running:
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
+                    if self.enable_move_mouse:
+                        move_length = random.randint(-2200, 2200)
+                        pydirectinput.moveRel(move_length, move_length, duration=1, relative=True)
                     move_list = ['w', 'a', 's', 'd']
                     random_move = random.choice(move_list)
-                    move_x = random.randint(-2000, 2000)
-                    move_y = random.randint(-1800, 1800)
-                    pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
                     pydirectinput.mouseDown(button='left')
                     pydirectinput.keyDown(random_move)
                     pydirectinput.keyDown('space')
