@@ -45,9 +45,9 @@ class CFAotuGUI(tk.Tk):
         self.is_topmost = tk.BooleanVar(value=True)
         self.last_action_time = time.time()
         self.emergency_enabled = tk.BooleanVar(value=True)
-        self.enable_move_mouse = False
+        self.is_in_game = False
         self.interval_seconds_min = 60
-        self.interval_seconds_max = 240
+        self.interval_seconds_max = 300
         self.interval_seconds = random.randint(self.interval_seconds_min, self.interval_seconds_max)
         self.interval_minutes_min = tk.StringVar(value=str(self.interval_seconds_min // 60))
         self.interval_minutes_max = tk.StringVar(value=str(self.interval_seconds_max // 60))
@@ -56,7 +56,7 @@ class CFAotuGUI(tk.Tk):
         self.scale_value = tk.DoubleVar(value=0.8)
         self.enable_menu_chose = tk.BooleanVar(value=True)
         self.enable_complex_skill = tk.BooleanVar(value=False)
-        self.menu_chose = tk.IntVar(value=4)
+        self.menu_chose_num = tk.IntVar(value=2)
         self.enable_window_region = True
         self.window_region_left = tk.IntVar(value=0)
         self.window_region_top = tk.IntVar(value=0)
@@ -101,7 +101,7 @@ class CFAotuGUI(tk.Tk):
         ttk.Button(btn_frame, text="开始挂机", command=self.start).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT)
         ttk.Checkbutton(btn_frame, text="开启自动选择终结者(1~7)", variable=self.enable_menu_chose).pack(side=tk.LEFT, padx=(15, 5))
-        ttk.Entry(btn_frame, textvariable=self.menu_chose, width=2, justify='center').pack(side=tk.LEFT)
+        ttk.Entry(btn_frame, textvariable=self.menu_chose_num, width=2, justify='center').pack(side=tk.LEFT)
         ttk.Checkbutton(btn_frame, text="复杂技能", variable=self.enable_complex_skill).pack(side=tk.LEFT, padx=6)
 
         setting_frame = ttk.Frame(self)
@@ -321,7 +321,6 @@ class CFAotuGUI(tk.Tk):
             else:
                 screenshot = pyautogui.screenshot()
             screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
-            found = False
             for path, tpl in self.templates.items():
                 if not self.running:
                     return
@@ -329,14 +328,16 @@ class CFAotuGUI(tk.Tk):
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
                 if max_val >= self.scale_value.get():
                     file_name = os.path.basename(path)
-                    if file_name.find("esc") >= 0:
-                        pydirectinput.press('esc')
-                        self.log_message("模板中有esc关键字,已按下")
-                        continue
-                    if file_name.find("seconds") >= 0:
-                        self.enable_move_mouse = True
+                    if file_name.find("wait") >= 0:
+                        break
+                    if file_name.find("loading") >= 0:
+                        self.is_in_game = True
+                        self.last_action_time = time.time()
+                        break
+                    if self.enable_menu_chose and file_name.find("seconds") >= 0:
+                        self.is_in_game = True
                         pydirectinput.press('f')
-                        self.log_message("检测到正在读秒,已按下F增加变鬼概率")
+                        self.log_message("检测到生化开局读秒,已按下F增加变终结效率")
                         continue
                     if self.enable_menu_chose.get():
                         if file_name.find("ui") >= 0:
@@ -344,8 +345,8 @@ class CFAotuGUI(tk.Tk):
                             self.log_message("已按下E呼出变身菜单")
                             continue
                         if file_name.find("menu") >= 0:
-                            pydirectinput.press(str(self.menu_chose.get()))
-                            self.log_message(f"检测到变身菜单,已按下{self.menu_chose.get()}选择指定终结者")
+                            pydirectinput.press(str(self.menu_chose_num.get()))
+                            self.log_message(f"检测到变身菜单,已按下{self.menu_chose_num.get()}选择指定终结者")
                             continue
                         if file_name.find("skill_g") >= 0:
                             pydirectinput.press('g')
@@ -359,7 +360,7 @@ class CFAotuGUI(tk.Tk):
                         if file_name.find("skill_f") >= 0:
                             pydirectinput.press('f')
                             if self.enable_complex_skill:
-                                move_x = random.randint(-2000,2000)
+                                move_x = random.randint(-3000,3000)
                                 move_y = random.randint(400,1800)
                                 time.sleep(1)
                                 pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
@@ -370,7 +371,7 @@ class CFAotuGUI(tk.Tk):
                             self.log_message("已使用技能F")
                             continue
                     if file_name.find("settle") >= 0:
-                        self.enable_move_mouse = False
+                        self.is_in_game = False
                         self.window_capture('settle')
                         time.sleep(0.5)
                     th, tw = tpl.shape
@@ -379,10 +380,7 @@ class CFAotuGUI(tk.Tk):
                     self.click_at(self.window_region_left.get() + x, self.window_region_top.get() + y)
                     self.last_action_time = time.time()
                     self.log_message(f"点击了 {file_name}@({x},{y})conf={max_val:.2f}")
-                    if file_name.find("join") >= 0 or file_name.find("start") >= 0:
-                        time.sleep(10)
                     time.sleep(0.5)
-                    found = True
             # 上票
             if self.f11_enabled.get():  # 检查是否开启 F11 检测
                 for path, tpl in self.f11_templates.items():
@@ -395,22 +393,28 @@ class CFAotuGUI(tk.Tk):
                         self.log_message(f"检测到t狗:{os.path.basename(path)},已按下F11上票")
                         break
             # 反挂机检测
-            if not found and self.emergency_enabled.get() and self.running:
+            if self.is_in_game and self.emergency_enabled.get() and self.running:
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
-                    if self.enable_move_mouse:
-                        move_length = random.randint(-2200, 2200)
-                        pydirectinput.moveRel(move_length, move_length, duration=1, relative=True)
-                    move_list = ['w', 'a', 's', 'd']
-                    random_move = random.choice(move_list)
+                    move_x = random.randint(-3000, 3000)
+                    move_y = random.randint(-3000, 3000)
+                    pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
+                    move_list_1 = ['w', 's']
+                    random_move_1 = random.choice(move_list_1)
+                    move_list_2 = ['a', 'd', '']
+                    random_move_2 = random.choice(move_list_2)
                     pydirectinput.mouseDown(button='left')
-                    pydirectinput.keyDown(random_move)
+                    pydirectinput.keyDown(random_move_1)
+                    if len(random_move_2) > 0:
+                        pydirectinput.keyDown(random_move_2)
                     pydirectinput.keyDown('space')
                     pydirectinput.keyUp('space')
-                    time.sleep(random.randint(1, 5))
-                    pydirectinput.keyUp(random_move)
+                    time.sleep(random.uniform(1, 3))
+                    if len(random_move_2) > 0:
+                        pydirectinput.keyUp(random_move_2)
+                    pydirectinput.keyUp(random_move_1)
                     pydirectinput.mouseUp(button='left')
-                    self.log_message(f"{round(current_interval_seconds, 1)}秒未匹配到模板,触发反挂机动作{random_move}")
+                    self.log_message(f"{round(current_interval_seconds)}秒未点击模板,执行反挂机检测{random_move_1}{random_move_2}")
                     self.last_action_time = time.time()
                     try:
                         self.interval_seconds = random.randint(int(float(self.interval_minutes_min.get()) * 60),
