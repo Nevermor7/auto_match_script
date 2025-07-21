@@ -9,6 +9,7 @@ import numpy as np
 import pyautogui
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import pydirectinput
 
 # Windows 专用库
 try:
@@ -32,7 +33,7 @@ class CFAotuGUI(tk.Tk):
         super().__init__()
         random.seed(datetime.now().timestamp())
         self.title("Ack")
-        self.geometry("590x730-200+0")
+        self.geometry("590x650-180+0")
         self.templates = {}
         self.receive_templates = {}
         self.f11_templates = {}
@@ -43,14 +44,17 @@ class CFAotuGUI(tk.Tk):
         self.hotkey_listener = None
         self.is_topmost = tk.BooleanVar(value=True)
         self.last_action_time = time.time()
-        self.emergency_enabled = tk.BooleanVar(value=False)
-        self.interval_seconds = random.randint(180, 600)
-        self.interval_minutes_min = tk.StringVar(value="3")
-        self.interval_minutes_max = tk.StringVar(value="10")
+        self.emergency_enabled = tk.BooleanVar(value=True)
+        self.interval_seconds_min = 60
+        self.interval_seconds_max = 240
+        self.interval_seconds = random.randint(self.interval_seconds_min, self.interval_seconds_max)
+        self.interval_minutes_min = tk.StringVar(value=str(self.interval_seconds_min // 60))
+        self.interval_minutes_max = tk.StringVar(value=str(self.interval_seconds_max // 60))
         self.log_enabled = tk.BooleanVar(value=True)
         self.f11_enabled = tk.BooleanVar(value=True)
         self.scale_value = tk.DoubleVar(value=0.8)
         self.enable_menu_chose = tk.BooleanVar(value=True)
+        self.enable_complex_skill = tk.BooleanVar(value=False)
         self.menu_chose = tk.IntVar(value=4)
         self.enable_window_region = True
         self.window_region_left = tk.IntVar(value=0)
@@ -94,9 +98,10 @@ class CFAotuGUI(tk.Tk):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Button(btn_frame, text="开始挂机", command=self.start).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT, padx=(15, 5))
-        ttk.Checkbutton(btn_frame, text="开启自动选择终结者(1~7)", variable=self.enable_menu_chose).pack(side=tk.LEFT, padx=(70, 10))
-        ttk.Entry(btn_frame, textvariable=self.menu_chose, width=3, justify='center').pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT)
+        ttk.Checkbutton(btn_frame, text="开启自动选择终结者(1~7)", variable=self.enable_menu_chose).pack(side=tk.LEFT, padx=(15, 5))
+        ttk.Entry(btn_frame, textvariable=self.menu_chose, width=2, justify='center').pack(side=tk.LEFT)
+        ttk.Checkbutton(btn_frame, text="复杂技能", variable=self.enable_complex_skill).pack(side=tk.LEFT, padx=6)
 
         setting_frame = ttk.Frame(self)
         setting_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -120,14 +125,14 @@ class CFAotuGUI(tk.Tk):
         ttk.Entry(region_frame, textvariable=self.window_region_height, width=5, justify='center').pack(side=tk.LEFT, padx=5)
         ttk.Button(region_frame, text="刷新窗口位置", command=self.reload_window_region).pack(side=tk.LEFT, padx=(20, 0))
 
-        self.listbox = tk.Listbox(self, height=8)
+        self.listbox = tk.Listbox(self, height=6)
         self.listbox.pack(fill=tk.BOTH, padx=5, pady=5)
 
         log_frame = ttk.Frame(self)
         log_frame.pack(fill=tk.X, padx=5)
         ttk.Button(log_frame, text="清空日志", command=self.clear_log).pack(side=tk.LEFT, padx=5)
 
-        self.log = tk.Text(self, height=15)
+        self.log = tk.Text(self, height=13)
         self.log.pack(fill=tk.BOTH, padx=5, pady=5)
         self.log.insert(tk.END, "日志信息...\n")
         self.log.configure(state=tk.DISABLED)
@@ -243,10 +248,10 @@ class CFAotuGUI(tk.Tk):
                 time.sleep(0.05)
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
             else:
-                pyautogui.moveTo(x, y)
-                pyautogui.mouseDown()
+                pydirectinput.moveTo(x, y)
+                pydirectinput.mouseDown()
                 time.sleep(0.05)
-                pyautogui.mouseUp()
+                pydirectinput.mouseUp()
         except Exception as e:
             self.log_message(f"点击时发生错误: {e}")
 
@@ -291,7 +296,8 @@ class CFAotuGUI(tk.Tk):
         file_name = f'{file_prefix}_{time.strftime('%H_%M')}.png'
         file_path = os.path.join(target_dir, file_name)
         screenshot.save(file_path)
-        self.log_message(f"截图已保存至{file_path}")
+        # self.log_message(f"截图已保存至{file_path}")
+        self.log_message(f"截图已保存 {file_name}")
 
     def reload_window_region(self):
         # 获取窗口的位置和大小
@@ -322,31 +328,52 @@ class CFAotuGUI(tk.Tk):
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
                 if max_val >= self.scale_value.get():
                     file_name = os.path.basename(path)
+                    if file_name.find("esc") >= 0:
+                        pydirectinput.press('esc')
+                        self.log_message("模板中有esc关键字,已按下")
+                        continue
                     if self.enable_menu_chose.get():
                         if file_name.find("ui") >= 0:
-                            pyautogui.press('e')
+                            pydirectinput.press('e')
                             self.log_message("已按下E呼出变身菜单")
                             continue
                         if file_name.find("menu") >= 0:
-                            pyautogui.press(str(self.menu_chose.get()))
+                            pydirectinput.press(str(self.menu_chose.get()))
                             self.log_message(f"检测到变身菜单,已按下{self.menu_chose.get()}选择指定终结者")
                             continue
-                        if file_name.find("gangtie") >= 0:
-                            pyautogui.press('g')
-                            self.log_message("当前终结者:钢铁,已按下G开启暴走")
+                        if file_name.find("skill_g") >= 0:
+                            pydirectinput.press('g')
+                            if self.enable_complex_skill:
+                                time.sleep(2)
+                                pydirectinput.mouseDown()
+                                time.sleep(0.05)
+                                pydirectinput.mouseUp()
+                            self.log_message("已使用技能G")
                             continue
-                        if file_name.find("dsf") >= 0:
-                            pyautogui.press('f')
-                            self.log_message("当前终结者:大声发,已按下F开始狗叫")
+                        if file_name.find("skill_f") >= 0:
+                            pydirectinput.press('f')
+                            if self.enable_complex_skill:
+                                move_x = random.randint(-2000,2000)
+                                move_y = random.randint(400,1800)
+                                time.sleep(1)
+                                pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
+                                pydirectinput.mouseDown()
+                                time.sleep(0.05)
+                                pydirectinput.mouseUp()
+                                pydirectinput.moveRel(-move_x, -move_y, duration=1, relative=True)
+                            self.log_message("已使用技能F")
                             continue
-                    if file_name.find("settlement") >= 0:
-                        self.window_capture('settlement')
+                    if file_name.find("settle") >= 0:
+                        self.window_capture('settle')
+                        time.sleep(0.5)
                     th, tw = tpl.shape
                     x = max_loc[0] + tw // 2
                     y = max_loc[1] + th // 2
                     self.click_at(self.window_region_left.get() + x, self.window_region_top.get() + y)
                     self.last_action_time = time.time()
                     self.log_message(f"点击了 {file_name}@({x},{y})conf={max_val:.2f}")
+                    if file_name.find("join") >= 0 or file_name.find("start") >= 0:
+                        time.sleep(10)
                     time.sleep(0.5)
                     found = True
             # 上票
@@ -357,24 +384,33 @@ class CFAotuGUI(tk.Tk):
                     res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, _ = cv2.minMaxLoc(res)
                     if max_val >= self.scale_value.get():
-                        pyautogui.press('f11')
+                        pydirectinput.press('f11')
                         self.log_message(f"检测到t狗:{os.path.basename(path)},已按下F11上票")
                         break
             # 反挂机检测
             if not found and self.emergency_enabled.get() and self.running:
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
-                    pyautogui.mouseDown(button='left')
-                    time.sleep(1)
-                    pyautogui.mouseUp(button='left')
-                    self.log_message("{}秒未匹配到模板,触发反挂机检测".format(round(current_interval_seconds, 1)))
+                    move_list = ['w', 'a', 's', 'd']
+                    random_move = random.choice(move_list)
+                    move_x = random.randint(-2000, 2000)
+                    move_y = random.randint(-1800, 1800)
+                    pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
+                    pydirectinput.mouseDown(button='left')
+                    pydirectinput.keyDown(random_move)
+                    pydirectinput.keyDown('space')
+                    pydirectinput.keyUp('space')
+                    time.sleep(random.randint(1, 5))
+                    pydirectinput.keyUp(random_move)
+                    pydirectinput.mouseUp(button='left')
+                    self.log_message(f"{round(current_interval_seconds, 1)}秒未匹配到模板,触发反挂机动作{random_move}")
                     self.last_action_time = time.time()
                     try:
                         self.interval_seconds = random.randint(int(float(self.interval_minutes_min.get()) * 60),
                                                                int(float(self.interval_minutes_max.get()) * 60))
                     except:
-                        self.interval_seconds = random.randint(180, 600)
-            time.sleep(0.5)
+                        self.interval_seconds = random.randint(self.interval_seconds_min, self.interval_seconds_max)
+            time.sleep(1)
 
 
 if __name__ == '__main__':
