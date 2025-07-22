@@ -266,6 +266,7 @@ class CFAotuGUI(tk.Tk):
             self.interval_seconds = random.randint(int(float(self.interval_minutes_min.get()) * 60), int(float(self.interval_minutes_max.get()) * 60))
         except:
             pass
+        pydirectinput.FAILSAFE = False
         self.reload_window_region()
         self.running = True
         self.last_action_time = time.time()
@@ -350,7 +351,7 @@ class CFAotuGUI(tk.Tk):
                             continue
                         if file_name.find("skill_g") >= 0:
                             pydirectinput.press('g')
-                            if self.enable_complex_skill:
+                            if self.enable_complex_skill.get():
                                 time.sleep(2)
                                 pydirectinput.mouseDown()
                                 time.sleep(0.05)
@@ -359,7 +360,7 @@ class CFAotuGUI(tk.Tk):
                             continue
                         if file_name.find("skill_f") >= 0:
                             pydirectinput.press('f')
-                            if self.enable_complex_skill:
+                            if self.enable_complex_skill.get():
                                 move_x = random.randint(-3000,3000)
                                 move_y = random.randint(400,1800)
                                 time.sleep(1)
@@ -421,7 +422,7 @@ class CFAotuGUI(tk.Tk):
                                                                int(float(self.interval_minutes_max.get()) * 60))
                     except:
                         self.interval_seconds = random.randint(self.interval_seconds_min, self.interval_seconds_max)
-            time.sleep(1)
+            time.sleep(0.5)
 
 
 if __name__ == '__main__':
