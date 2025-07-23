@@ -349,11 +349,11 @@ class CFAotuGUI(tk.Tk):
                         if file_name.find("ui") >= 0:
                             pydirectinput.press('e')
                             self.log_message("已按下E呼出变身菜单")
-                            break
+                            continue
                         if file_name.find("menu") >= 0:
                             pydirectinput.press(str(self.menu_chose_num.get()))
                             self.log_message(f"检测到变身菜单,已按下{self.menu_chose_num.get()}选择指定终结者")
-                            break
+                            continue
                         if file_name.find("skill_g") >= 0:
                             pydirectinput.press('g')
                             if self.enable_complex_skill.get():
@@ -362,7 +362,7 @@ class CFAotuGUI(tk.Tk):
                                 time.sleep(0.05)
                                 pydirectinput.mouseUp()
                             self.log_message("已使用技能G")
-                            break
+                            continue
                         if file_name.find("skill_f") >= 0:
                             pydirectinput.press('f')
                             if self.enable_complex_skill.get():
@@ -375,7 +375,7 @@ class CFAotuGUI(tk.Tk):
                                 pydirectinput.mouseUp()
                                 pydirectinput.moveRel(-move_x, -move_y, duration=1, relative=True)
                             self.log_message("已使用技能F")
-                            break
+                            continue
                     if file_name.find("settle") >= 0:
                         self.is_in_game = False
                         self.window_capture('settle')
