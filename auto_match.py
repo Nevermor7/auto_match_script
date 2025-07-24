@@ -339,13 +339,13 @@ class CFAotuGUI(tk.Tk):
                         self.is_in_game = True
                         self.last_action_time = time.time()
                         break
-                    if file_name.find("seconds") >= 0:
-                        self.is_in_game = True
-                        if self.enable_menu_chose:
-                            pydirectinput.press('f')
-                            self.log_message("检测到生化开局读秒,已按下F增加变终结效率")
-                        continue
                     if self.enable_menu_chose.get():
+                        if file_name.find("seconds") >= 0:
+                            self.is_in_game = True
+                            if self.enable_menu_chose:
+                                pydirectinput.press('f')
+                                self.log_message("检测到生化开局读秒,已按下F增加变终结效率")
+                            continue
                         if file_name.find("ui") >= 0:
                             pydirectinput.press('e')
                             self.log_message("已按下E呼出变身菜单")
@@ -404,9 +404,9 @@ class CFAotuGUI(tk.Tk):
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
                     if self.is_in_game:
-                        move_x = random.randint(-3000, 3000)
-                        move_y = random.randint(-3000, 3000)
-                        pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
+                        # move_x = random.randint(-3000, 3000)
+                        # move_y = random.randint(-3000, 3000)
+                        # pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
                         move_list_1 = ['w', 's']
                         random_move_1 = random.choice(move_list_1)
                         move_list_2 = ['a', 'd', '']
