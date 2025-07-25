@@ -250,9 +250,9 @@ class CFAotuGUI(tk.Tk):
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
             else:
                 pydirectinput.moveTo(x, y)
-                pydirectinput.mouseDown()
+                pydirectinput.mouseDown(button='left')
                 time.sleep(0.05)
-                pydirectinput.mouseUp()
+                pydirectinput.mouseUp(button='left')
         except Exception as e:
             self.log_message(f"点击时发生错误: {e}")
 
@@ -322,7 +322,6 @@ class CFAotuGUI(tk.Tk):
             else:
                 screenshot = pyautogui.screenshot()
             screen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
-            found = False
             for path, tpl in self.templates.items():
                 if not self.running:
                     return
@@ -333,49 +332,49 @@ class CFAotuGUI(tk.Tk):
                     if file_name.find("wait") >= 0:
                         break
                     if file_name.find("loading") >= 0:
-                        found = True
-                        if self.is_in_game:
-                            break
                         self.is_in_game = True
                         self.last_action_time = time.time()
                         break
-                    if self.enable_menu_chose.get():
-                        if file_name.find("seconds") >= 0:
-                            self.is_in_game = True
-                            if self.enable_menu_chose:
-                                pydirectinput.press('f')
-                                self.log_message("检测到生化开局读秒,已按下F增加变终结效率")
-                            continue
-                        if file_name.find("ui") >= 0:
+                    if file_name.find("seconds") >= 0:
+                        self.is_in_game = True
+                        if self.enable_menu_chose.get():
+                            pydirectinput.press('f')
+                            self.log_message("检测到生化开局读秒,已按下F增加变终结效率")
+                        continue
+                    if file_name.find("ui") >= 0:
+                        if self.enable_menu_chose.get():
                             pydirectinput.press('e')
                             self.log_message("已按下E呼出变身菜单")
-                            continue
-                        if file_name.find("menu") >= 0:
+                        continue
+                    if file_name.find("menu") >= 0:
+                        if self.enable_menu_chose.get():
                             pydirectinput.press(str(self.menu_chose_num.get()))
                             self.log_message(f"检测到变身菜单,已按下{self.menu_chose_num.get()}选择指定终结者")
-                            continue
-                        if file_name.find("skill_g") >= 0:
+                        continue
+                    if file_name.find("skill_g") >= 0:
+                        if self.enable_menu_chose.get():
                             pydirectinput.press('g')
                             if self.enable_complex_skill.get():
                                 time.sleep(2)
-                                pydirectinput.mouseDown()
+                                pydirectinput.mouseDown(button='left')
                                 time.sleep(0.05)
-                                pydirectinput.mouseUp()
+                                pydirectinput.mouseUp(button='left')
                             self.log_message("已使用技能G")
-                            continue
-                        if file_name.find("skill_f") >= 0:
+                        continue
+                    if file_name.find("skill_f") >= 0:
+                        if self.enable_menu_chose.get():
                             pydirectinput.press('f')
                             if self.enable_complex_skill.get():
                                 move_x = random.randint(-3000,3000)
                                 move_y = random.randint(400,1800)
                                 time.sleep(1)
                                 pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
-                                pydirectinput.mouseDown()
+                                pydirectinput.mouseDown(button='left')
                                 time.sleep(0.05)
-                                pydirectinput.mouseUp()
+                                pydirectinput.mouseUp(button='left')
                                 pydirectinput.moveRel(-move_x, -move_y, duration=1, relative=True)
                             self.log_message("已使用技能F")
-                            continue
+                        continue
                     if file_name.find("settle") >= 0:
                         self.is_in_game = False
                         self.window_capture('settle')
@@ -387,7 +386,6 @@ class CFAotuGUI(tk.Tk):
                     self.last_action_time = time.time()
                     self.log_message(f"点击了 {file_name}@({x},{y})conf={max_val:.2f}")
                     time.sleep(0.5)
-                    found = True
             # 上票
             if self.f11_enabled.get():  # 检查是否开启 F11 检测
                 for path, tpl in self.f11_templates.items():
@@ -400,32 +398,24 @@ class CFAotuGUI(tk.Tk):
                         self.log_message(f"检测到t狗:{os.path.basename(path)},已按下F11上票")
                         break
             # 反挂机检测
-            if not found and self.emergency_enabled.get() and self.running:
+            if self.is_in_game and self.emergency_enabled.get() and self.running:
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
-                    if self.is_in_game:
-                        # move_x = random.randint(-3000, 3000)
-                        # move_y = random.randint(-3000, 3000)
-                        # pydirectinput.moveRel(move_x, move_y, duration=1, relative=True)
-                        move_list_1 = ['w', 's']
-                        random_move_1 = random.choice(move_list_1)
-                        move_list_2 = ['a', 'd', '']
-                        random_move_2 = random.choice(move_list_2)
-                        pydirectinput.mouseDown(button='left')
-                        pydirectinput.keyDown(random_move_1)
-                        if len(random_move_2) > 0:
-                            pydirectinput.keyDown(random_move_2)
-                        pydirectinput.keyDown('space')
-                        pydirectinput.keyUp('space')
-                        time.sleep(random.uniform(1, 3))
-                        if len(random_move_2) > 0:
-                            pydirectinput.keyUp(random_move_2)
-                        pydirectinput.keyUp(random_move_1)
-                        pydirectinput.mouseUp(button='left')
-                    else:
-                        pydirectinput.mouseDown(button='left')
-                        time.sleep(1)
-                        pydirectinput.mouseUp(button='left')
+                    move_list_1 = ['w', 's']
+                    random_move_1 = random.choice(move_list_1)
+                    move_list_2 = ['a', 'd', '']
+                    random_move_2 = random.choice(move_list_2)
+                    pydirectinput.mouseDown(button='left')
+                    pydirectinput.keyDown(random_move_1)
+                    if len(random_move_2) > 0:
+                        pydirectinput.keyDown(random_move_2)
+                    pydirectinput.keyDown('space')
+                    pydirectinput.keyUp('space')
+                    time.sleep(random.uniform(1, 3))
+                    if len(random_move_2) > 0:
+                        pydirectinput.keyUp(random_move_2)
+                    pydirectinput.keyUp(random_move_1)
+                    pydirectinput.mouseUp(button='left')
                     self.log_message(f"{round(current_interval_seconds)}秒未点击模板,执行反挂机检测{random_move_1}{random_move_2}")
                     self.last_action_time = time.time()
                     try:
