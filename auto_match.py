@@ -363,7 +363,7 @@ class CFAotuGUI(tk.Tk):
                 current_interval_seconds = time.time() - self.last_action_time
                 if current_interval_seconds > self.interval_seconds:
                     pyautogui.mouseDown(button='left')
-                    time.sleep(1)
+                    time.sleep(random.uniform(1, 3))
                     pyautogui.mouseUp(button='left')
                     self.log_message(f"{round(current_interval_seconds)}秒未点击模板,执行反挂机检测")
                     self.last_action_time = time.time()
