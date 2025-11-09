@@ -268,7 +268,7 @@ class CFAotuGUI(tk.Tk):
             self.interval_seconds = random.randint(int(float(self.interval_minutes_min.get()) * 60), int(float(self.interval_minutes_max.get()) * 60))
         except:
             pass
-        self.reload_window_region()
+        # self.reload_window_region()
         self.running = True
         self.last_action_time = time.time()
         self.worker_thread = threading.Thread(target=self._loop, daemon=True)
@@ -336,7 +336,7 @@ class CFAotuGUI(tk.Tk):
                     file_name = os.path.basename(path)
                     if file_name.find("wait") >= 0:
                         break
-                    if file_name.find("settle") >= 0:
+                    if file_name.find("settle") >= 0 and self.log_enabled.get():
                         self.window_capture('settle')
                         time.sleep(0.5)
                     th, tw = tpl.shape
