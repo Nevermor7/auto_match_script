@@ -23,26 +23,19 @@ except ImportError:
     kb = None
 
 TEMPLATE_DIR = 'templates'
-F11_TEMPLATE_DIR = 'f11_templates'
-SCREEN_SHOT_DIR = 'screen_shot'
-LOG_DIR = 'log'
-
 
 class CFAotuGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         random.seed(datetime.now().timestamp())
         self.title("Ack")
-        self.geometry("590x650-180+0")
+        self.geometry("580x600-0+0")
         self.templates = {}
-        self.receive_templates = {}
-        self.f11_templates = {}
         self.running = False
         self.start_hotkey = tk.StringVar(value="F6")
         self.stop_hotkey = tk.StringVar(value="F7")
         self.worker_thread = None
         self.hotkey_listener = None
-        self.is_topmost = tk.BooleanVar(value=True)
         self.last_action_time = time.time()
         self.emergency_enabled = tk.BooleanVar(value=False)
         self.interval_seconds_min = 180
@@ -60,28 +53,16 @@ class CFAotuGUI(tk.Tk):
         self.window_region_height = tk.IntVar(value=0)
 
         os.makedirs(TEMPLATE_DIR, exist_ok=True)
-        os.makedirs(F11_TEMPLATE_DIR, exist_ok=True)
-        os.makedirs(SCREEN_SHOT_DIR, exist_ok=True)
-        os.makedirs(LOG_DIR, exist_ok=True)
 
         self._build_ui()
         self._load_templates()
-        self._load_f11_templates()
         self._load_hotkey_listener()
 
     def _build_ui(self):
-        frame = ttk.Frame(self)
-        frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Button(frame, text="添加模板", command=self.add_template).pack(side=tk.LEFT, padx=5)
-        ttk.Button(frame, text="移除模板", command=self.remove_template).pack(side=tk.LEFT)
-        ttk.Button(frame, text="刷新模板", command=self._load_templates).pack(side=tk.LEFT, padx=5)
-        ttk.Button(frame, text="添加F11模板", command=self.add_f11_template).pack(side=tk.LEFT)
-        ttk.Button(frame, text="移除F11模板", command=self.remove_f11_template).pack(side=tk.LEFT, padx=5)
-
         scale_frame = ttk.Frame(self)
         scale_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(scale_frame, text="识别模板的匹配度阈值,默认80%").pack(side=tk.LEFT, padx=5)
-        ttk.Scale(scale_frame, value=self.scale_value.get(), command=self.set_scale_value, to=1, length=270).pack(side=tk.LEFT, padx=(20, 15))
+        ttk.Scale(scale_frame, value=self.scale_value.get(), command=self.set_scale_value, to=1, length=260).pack(side=tk.LEFT, padx=(20, 15))
         ttk.Label(scale_frame, textvariable=self.scale_value, width=5).pack(side=tk.LEFT)
 
         region_frame = ttk.Frame(self)
@@ -118,7 +99,6 @@ class CFAotuGUI(tk.Tk):
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Button(btn_frame, text="开始挂机", command=self.start).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT, padx=10)
-        ttk.Checkbutton(btn_frame, text="置顶窗口", variable=self.is_topmost, command=self.toggle_topmost).pack(side=tk.RIGHT, padx=17)
 
         self.listbox = tk.Listbox(self, height=6)
         self.listbox.pack(fill=tk.BOTH, padx=5, pady=5)
@@ -135,22 +115,12 @@ class CFAotuGUI(tk.Tk):
     def set_scale_value(self, change_value):
         self.scale_value.set(round(float(change_value), 2))
 
-    def toggle_topmost(self):
-        self.attributes('-topmost', self.is_topmost.get())
-
     def log_message(self, msg):
         if not self.log_enabled.get():
             return
         self.log.configure(state=tk.NORMAL)
         log_message = f"{time.strftime('%m-%d %H:%M:%S')} - {msg}\n"
         self.log.insert(tk.END, log_message)
-        try:
-            file_name = f'{time.strftime('%Y-%m-%d')}.txt'
-            file_path = os.path.join(LOG_DIR, file_name)
-            with open(file_path, 'a', encoding='utf-8') as log_file:
-                log_file.write(log_message)
-        except Exception as e:
-            self.log.insert(tk.END, f"{time.strftime('%m-%d %H:%M:%S')} - 将日志写入文件时发生错误: {e}\n")
         self.log.configure(state=tk.DISABLED)
         self.log.see(tk.END)
 
@@ -171,65 +141,6 @@ class CFAotuGUI(tk.Tk):
                 if tpl is not None:
                     self.templates[path] = tpl
                     self.listbox.insert(tk.END, os.path.basename(path))
-
-    def _load_f11_templates(self):
-        self.f11_templates.clear()
-        for filename in os.listdir(F11_TEMPLATE_DIR):
-            path = os.path.join(F11_TEMPLATE_DIR, filename)
-            if os.path.isfile(path) and path.lower().endswith(('.png', '.jpg', '.bmp')):
-                tpl = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-                if tpl is not None:
-                    self.f11_templates[path] = tpl
-
-    def add_template(self):
-        path = filedialog.askopenfilename(title='选择模板', filetypes=[('图片文件', '*.png;*.jpg;*.bmp')])
-        if not path:
-            return
-        tpl = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        if tpl is None:
-            messagebox.showerror('错误', '无法读取图像')
-            return
-        dst_path = os.path.join(TEMPLATE_DIR, os.path.basename(path))
-        if not os.path.exists(dst_path):
-            cv2.imwrite(dst_path, tpl)
-        self._load_templates()
-        self.log_message(f"添加模板: {os.path.basename(path)}")
-
-    def remove_template(self):
-        sel = self.listbox.curselection()
-        if not sel:
-            return
-        name = self.listbox.get(sel[0])
-        path = os.path.join(TEMPLATE_DIR, name)
-        if os.path.exists(path):
-            os.remove(path)
-        self._load_templates()
-        self.log_message(f"移除模板: {name}")
-
-    def add_f11_template(self):
-        path = filedialog.askopenfilename(title='选择F11模板', filetypes=[('图片文件', '*.png;*.jpg;*.bmp')])
-        if not path:
-            return
-        tpl = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        if tpl is None:
-            messagebox.showerror('错误', '无法读取图像')
-            return
-        dst_path = os.path.join(F11_TEMPLATE_DIR, os.path.basename(path))
-        if not os.path.exists(dst_path):
-            cv2.imwrite(dst_path, tpl)
-        self._load_f11_templates()
-        self.log_message(f"添加F11模板: {os.path.basename(path)}")
-
-    def remove_f11_template(self):
-        files = os.listdir(F11_TEMPLATE_DIR)
-        if not files:
-            messagebox.showinfo('提示', '无F11模板可移除')
-            return
-        name = filedialog.askopenfilename(initialdir=F11_TEMPLATE_DIR, title='移除F11模板',filetypes=[('图片文件', '*.png;*.jpg;*.bmp')])
-        if name and os.path.exists(name):
-            os.remove(name)
-        self._load_f11_templates()
-        self.log_message(f"移除F11模板: {os.path.basename(name)}")
 
     def _load_hotkey_listener(self):
         if self.hotkey_listener:
@@ -268,7 +179,6 @@ class CFAotuGUI(tk.Tk):
             self.interval_seconds = random.randint(int(float(self.interval_minutes_min.get()) * 60), int(float(self.interval_minutes_max.get()) * 60))
         except:
             pass
-        # self.reload_window_region()
         self.running = True
         self.last_action_time = time.time()
         self.worker_thread = threading.Thread(target=self._loop, daemon=True)
@@ -282,24 +192,6 @@ class CFAotuGUI(tk.Tk):
         if self.worker_thread:
             self.worker_thread.join(timeout=2)
         self.log_message('挂机停止')
-
-    def window_capture(self, file_prefix):
-        # 获取窗口的位置和大小
-        windows = pygetwindow.getWindowsWithTitle('穿越火线')
-        if windows and windows[0].isActive:
-            window = windows[0]
-            left, top, width, height = window.left, window.top, window.width, window.height
-            screenshot = pyautogui.screenshot(region=(left, top, width, height))
-        else:
-            self.log_message("未检测到游戏窗口,执行全屏截图！")
-            screenshot = pyautogui.screenshot()
-        # 保存截图
-        target_dir = rf'{SCREEN_SHOT_DIR}\{time.strftime('%Y-%m-%d')}'
-        os.makedirs(target_dir, exist_ok=True)
-        file_name = f'{file_prefix}_{time.strftime('%H_%M')}.png'
-        file_path = os.path.join(target_dir, file_name)
-        screenshot.save(file_path)
-        self.log_message(f"截图已保存 {file_name}")
 
     def reload_window_region(self):
         # 获取窗口的位置和大小
@@ -334,11 +226,6 @@ class CFAotuGUI(tk.Tk):
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
                 if max_val >= self.scale_value.get():
                     file_name = os.path.basename(path)
-                    if file_name.find("wait") >= 0:
-                        break
-                    if file_name.find("settle") >= 0 and self.log_enabled.get():
-                        self.window_capture('settle')
-                        time.sleep(0.5)
                     th, tw = tpl.shape
                     x = max_loc[0] + tw // 2
                     y = max_loc[1] + th // 2
@@ -347,14 +234,9 @@ class CFAotuGUI(tk.Tk):
                     self.log_message(f"点击了 {file_name}@({x},{y})conf={max_val:.2f}")
                     time.sleep(0.5)
                     found = True
-            # 上票
-            if self.f11_enabled.get():  # 检查是否开启 F11 检测
-                for path, tpl in self.f11_templates.items():
-                    if not self.running:
-                        return
-                    res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
-                    _, max_val, _, _ = cv2.minMaxLoc(res)
-                    if max_val >= self.scale_value.get():
+                    # 把F11移到这里
+                    if self.f11_enabled.get() and file_name.find("f11") >= 0:
+                        time.sleep(0.5)
                         pyautogui.press('f11')
                         self.log_message(f"检测到t狗:{os.path.basename(path)},已按下F11上票")
                         break
