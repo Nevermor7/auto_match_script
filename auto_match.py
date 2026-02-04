@@ -98,7 +98,8 @@ class CFAotuGUI(tk.Tk):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Button(btn_frame, text="开始挂机", command=self.start).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT, padx=10)
+        ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="刷新模板", command=self._load_templates).pack(side=tk.LEFT, padx=5)
 
         self.listbox = tk.Listbox(self, height=6)
         self.listbox.pack(fill=tk.BOTH, padx=5, pady=5)
@@ -226,6 +227,8 @@ class CFAotuGUI(tk.Tk):
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
                 if max_val >= self.scale_value.get():
                     file_name = os.path.basename(path)
+                    if file_name.find("wait") >= 0:
+                        break
                     th, tw = tpl.shape
                     x = max_loc[0] + tw // 2
                     y = max_loc[1] + th // 2
