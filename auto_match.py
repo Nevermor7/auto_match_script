@@ -29,7 +29,7 @@ class CFAotuGUI(tk.Tk):
         super().__init__()
         random.seed(datetime.now().timestamp())
         self.title("Ack")
-        self.geometry("580x600-0+0")
+        self.geometry("466x570-0+0")
         self.templates = {}
         self.running = False
         self.start_hotkey = tk.StringVar(value="F6")
@@ -62,12 +62,12 @@ class CFAotuGUI(tk.Tk):
         scale_frame = ttk.Frame(self)
         scale_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(scale_frame, text="识别模板的匹配度阈值,默认80%").pack(side=tk.LEFT, padx=5)
-        ttk.Scale(scale_frame, value=self.scale_value.get(), command=self.set_scale_value, to=1, length=260).pack(side=tk.LEFT, padx=(20, 15))
+        ttk.Scale(scale_frame, value=self.scale_value.get(), command=self.set_scale_value, to=1, length=200).pack(side=tk.LEFT, padx=(20, 15))
         ttk.Label(scale_frame, textvariable=self.scale_value, width=5).pack(side=tk.LEFT)
 
         region_frame = ttk.Frame(self)
         region_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Label(region_frame, text="游戏窗口坐标").pack(side=tk.LEFT, padx=(5, 20))
+        ttk.Label(region_frame, text="游戏窗口坐标").pack(side=tk.LEFT, padx=5)
         ttk.Label(region_frame, text="左").pack(side=tk.LEFT)
         ttk.Entry(region_frame, textvariable=self.window_region_left, width=5, justify='center').pack(side=tk.LEFT, padx=5)
         ttk.Label(region_frame, text="上").pack(side=tk.LEFT)
@@ -76,7 +76,7 @@ class CFAotuGUI(tk.Tk):
         ttk.Entry(region_frame, textvariable=self.window_region_width, width=5, justify='center').pack(side=tk.LEFT, padx=5)
         ttk.Label(region_frame, text="高").pack(side=tk.LEFT)
         ttk.Entry(region_frame, textvariable=self.window_region_height, width=5, justify='center').pack(side=tk.LEFT, padx=5)
-        ttk.Button(region_frame, text="刷新窗口位置", command=self.reload_window_region).pack(side=tk.LEFT, padx=(20, 0))
+        ttk.Button(region_frame, text="刷新窗口位置", command=self.reload_window_region).pack(side=tk.LEFT, padx=6)
 
         setting_frame = ttk.Frame(self)
         setting_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -84,22 +84,21 @@ class CFAotuGUI(tk.Tk):
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_min, width=3, justify='center').pack(side=tk.LEFT)
         ttk.Label(setting_frame, text="~").pack(side=tk.LEFT)
         ttk.Entry(setting_frame, textvariable=self.interval_minutes_max, width=3, justify='center').pack(side=tk.LEFT)
-        ttk.Checkbutton(setting_frame, text=" 开启自动F11踢狗",variable=self.f11_enabled).pack(side=tk.LEFT, padx=(21, 15))
+        ttk.Checkbutton(setting_frame, text=" 开启自动F11踢狗",variable=self.f11_enabled).pack(side=tk.LEFT, padx=(10, 5))
         ttk.Checkbutton(setting_frame, text="开启日志", variable=self.log_enabled).pack(side=tk.LEFT)
 
         hot_frame = ttk.Frame(self)
         hot_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(hot_frame, text="开始热键").pack(side=tk.LEFT, padx=5)
         ttk.Entry(hot_frame, textvariable=self.start_hotkey, width=15, justify='center').pack(side=tk.LEFT)
-        ttk.Label(hot_frame, text="停止热键").pack(side=tk.LEFT, padx=(15, 5))
+        ttk.Label(hot_frame, text="停止热键").pack(side=tk.LEFT, padx=5)
         ttk.Entry(hot_frame, textvariable=self.stop_hotkey, width=15, justify='center').pack(side=tk.LEFT)
-        ttk.Button(hot_frame, text="刷新热键", command=self._load_hotkey_listener).pack(side=tk.LEFT, padx=(20, 0))
-
+        ttk.Button(hot_frame, text="刷新热键", command=self._load_hotkey_listener).pack(side=tk.LEFT, padx=(15, 0))
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Button(btn_frame, text="开始挂机", command=self.start).pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="停止挂机", command=self.stop).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="刷新模板", command=self._load_templates).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="刷新模板", command=self._load_templates).pack(side=tk.LEFT, padx=(10, 0))
 
         self.listbox = tk.Listbox(self, height=6)
         self.listbox.pack(fill=tk.BOTH, padx=5, pady=5)
@@ -108,7 +107,7 @@ class CFAotuGUI(tk.Tk):
         log_frame.pack(fill=tk.X, padx=5)
         ttk.Button(log_frame, text="清空日志", command=self.clear_log).pack(side=tk.LEFT, padx=5)
 
-        self.log = tk.Text(self, height=13)
+        self.log = tk.Text(self, height=17)
         self.log.pack(fill=tk.BOTH, padx=5, pady=5)
         self.log.insert(tk.END, "日志信息...\n")
         self.log.configure(state=tk.DISABLED)
