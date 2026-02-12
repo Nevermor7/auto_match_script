@@ -23,6 +23,7 @@ except ImportError:
     kb = None
 
 TEMPLATE_DIR = 'templates'
+F11_TEMPLATE_DIR = 'f11_templates'
 
 class CFAotuGUI(tk.Tk):
     def __init__(self):
@@ -31,6 +32,7 @@ class CFAotuGUI(tk.Tk):
         self.title("Ack")
         self.geometry("466x570-0+0")
         self.templates = {}
+        self.f11_templates = {}
         self.running = False
         self.start_hotkey = tk.StringVar(value="F6")
         self.stop_hotkey = tk.StringVar(value="F7")
@@ -53,9 +55,11 @@ class CFAotuGUI(tk.Tk):
         self.window_region_height = tk.IntVar(value=0)
 
         os.makedirs(TEMPLATE_DIR, exist_ok=True)
+        os.makedirs(F11_TEMPLATE_DIR, exist_ok=True)
 
         self._build_ui()
         self._load_templates()
+        self._load_f11_templates()
         self._load_hotkey_listener()
 
     def _build_ui(self):
@@ -141,6 +145,15 @@ class CFAotuGUI(tk.Tk):
                 if tpl is not None:
                     self.templates[path] = tpl
                     self.listbox.insert(tk.END, os.path.basename(path))
+
+    def _load_f11_templates(self):
+        self.f11_templates.clear()
+        for filename in os.listdir(F11_TEMPLATE_DIR):
+            path = os.path.join(F11_TEMPLATE_DIR, filename)
+            if os.path.isfile(path) and path.lower().endswith(('.png', '.jpg', '.bmp')):
+                tpl = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+                if tpl is not None:
+                    self.f11_templates[path] = tpl
 
     def _load_hotkey_listener(self):
         if self.hotkey_listener:
@@ -236,9 +249,14 @@ class CFAotuGUI(tk.Tk):
                     self.log_message(f"点击了 {file_name}@({x},{y})conf={max_val:.2f}")
                     time.sleep(0.5)
                     found = True
-                    # 把F11移到这里
-                    if self.f11_enabled.get() and file_name.find("f11") >= 0:
-                        time.sleep(0.5)
+            # 上票
+            if self.f11_enabled.get():  # 检查是否开启 F11 检测
+                for path, tpl in self.f11_templates.items():
+                    if not self.running:
+                        return
+                    res = cv2.matchTemplate(screen, tpl, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, _ = cv2.minMaxLoc(res)
+                    if max_val >= self.scale_value.get():
                         pyautogui.press('f11')
                         self.log_message(f"检测到t狗:{os.path.basename(path)},已按下F11上票")
                         break
